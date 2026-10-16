@@ -1,0 +1,52 @@
+{
+  "acquisition_metadata": {
+    "provider_id": "SkyIsNoLimit",
+    "mission_name": "SKY_SHIELD",
+    "satellite_id": "SKY_SHIELD_03",
+    "scene_identifier": "SKY_SHIELD_20260824_091522_L1C_POL",
+    "capture_timestamp_utc": "2026-08-24T09:15:22.451Z",
+    "orbit": {
+      "path": 142,
+      "row": 33,
+      "direction": "descending"
+    }
+  },
+  "product_characteristics": {
+    "processing_level": "L1C",
+    "sensor_type": "optical_multispectral",
+    "metrics": {
+      "cloud_cover_percentage": 14.2,
+      "snow_cover_percentage": 0.0,
+      "sun_azimuth_deg": 154.32,
+      "sun_elevation_deg": 48.71
+    }
+  },
+  "spatial_extent": {
+    "coordinate_system": "EPSG:4326",
+    "bounding_box": {
+      "min_longitude": 20.912,
+      "min_latitude": 52.185,
+      "max_longitude": 21.245,
+      "max_latitude": 52.398
+    },
+    "geometry_geojson": {
+      "type": "Polygon",
+      "coordinates": [[
+        [20.912, 52.185],
+        [21.245, 52.185],
+        [21.245, 52.398],
+        [20.912, 52.398],
+        [20.912, 52.185]
+      ]]
+    }
+  },
+  "data_deliverables": {
+    "image_bands": {
+      "red": "https://data.skyisnolimit.com/store/2026/08/24/SKY_SHIELD_B04.tif",
+      "green": "https://data.skyisnolimit.com/store/2026/08/24/SKY_SHIELD_B03.tif",
+      "blue": "https://data.skyisnolimit.com/store/2026/08/24/SKY_SHIELD_B02.tif",
+      "nir": "https://data.skyisnolimit.com/store/2026/08/24/SKY_SHIELD_B08.tif"
+    },
+    "thumbnail": "https://data.skyisnolimit.com/store/2026/08/24/SKY_SHIELD_thumb.png"
+  }
+}

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<GranuleMetadata xmlns="http://spaceisnolimit.com/schemas/metadata/v2">
+  <HeaderInfo>
+    <Provider>SpaceIsNoLimit</Provider>
+    <Mission>SPACE_EYE</Mission>
+    <SpacecraftID>SE-02</SpacecraftID>
+    <GranuleID>SE02_L2A_20260824T104500_N001</GranuleID>
+  </HeaderInfo>
+
+  <TemporalCoverage>
+    <StartTimeUTC>2026-08-24T10:45:00Z</StartTimeUTC>
+    <StopTimeUTC>2026-08-24T10:45:18Z</StopTimeUTC>
+  </TemporalCoverage>
+
+  <ProductQuality>
+    <ProcessingLevel>L2A</ProcessingLevel>
+    <CloudCoveragePercentage>4.85</CloudCoveragePercentage>
+    <DataQualityStatus>PASSED</DataQualityStatus>
+  </ProductQuality>
+
+  <GeometricProperties>
+    <CRS>EPSG:32634</CRS>
+    <FootprintWKT>POLYGON((500000 5800000, 609780 5800000, 609780 5690220, 500000 5690220, 500000 5800000))</FootprintWKT>
+    <GlobalBBOX>
+      <WestBoundLongitude>19.981</WestBoundLongitude>
+      <EastBoundLongitude>21.615</EastBoundLongitude>
+      <SouthBoundLatitude>51.355</SouthBoundLatitude>
+      <NorthBoundLatitude>52.342</NorthBoundLatitude>
+    </GlobalBBOX>
+  </GeometricProperties>
+
+  <RasterFiles>
+    <Band index="1" name="B04_RED" resolution_m="10">
+      <URL>s3://space-eye-products/2026/L2A/SE02_20260824_B04.tif</URL>
+    </Band>
+    <Band index="2" name="B08_NIR" resolution_m="10">
+      <URL>s3://space-eye-products/2026/L2A/SE02_20260824_B08.tif</URL>
+    </Band>
+    <OverviewFile type="QUICKLOOK">
+      <URL>s3://space-eye-products/2026/L2A/SE02_20260824_QL.jpg</URL>
+    </OverviewFile>
+  </RasterFiles>
+</GranuleMetadata>
