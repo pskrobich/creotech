@@ -1,5 +1,7 @@
-pystac[validation]==1.13.0
-shapely==2.1.0
-pyproj==3.7.1
-pytest==8.3.5
 defusedxml==0.7.1
+fastapi==0.143.3
+pyproj==3.8.0
+pystac[validation]==1.15.2
+pytest==9.1.1
+shapely==2.2.0
+uvicorn[standard]==0.54.0

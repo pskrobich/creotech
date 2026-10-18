@@ -16,6 +16,7 @@ NS = {"g": "http://spaceisnolimit.com/schemas/metadata/v2"}
 
 
 class SpaceIsNoLimitAdapter(BaseAdapter):
+    media_types = frozenset({"application/xml", "text/xml"})
 
     def matches(self, payload: bytes) -> bool:
         try:
@@ -43,7 +44,7 @@ class SpaceIsNoLimitAdapter(BaseAdapter):
 
         def to_lon_lat(coords: np.ndarray) -> np.ndarray:
             lon, lat = to_wgs84.transform(coords[:, 0], coords[:, 1])
-            return np.column_stack([lon, lat])
+            return np.round(np.column_stack([lon, lat]), 7)
 
         geometry = orient(shapely.transform(footprint, to_lon_lat))
 

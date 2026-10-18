@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import ClassVar
 
 from pystac import Item, Link, MediaType, RelType
 
@@ -7,6 +8,7 @@ PROCESSING_EXT = "https://stac-extensions.github.io/processing/v1.2.0/schema.jso
 
 
 class BaseAdapter(ABC):
+    media_types: ClassVar[frozenset[str]]
 
     @abstractmethod
     def matches(self, payload: bytes) -> bool:
@@ -21,3 +23,11 @@ class BaseAdapter(ABC):
         item.add_link(Link(RelType.COLLECTION, f"../../{item.collection_id}", media_type=MediaType.JSON))
         item.validate()
         return item
+
+
+class UnsupportedFormatError(ValueError):
+    """Raised when no adapter recognizes the payload format."""
+
+
+class UnsupportedMediaTypeError(ValueError):
+    """Raised when no adapter accepts the request's content type."""

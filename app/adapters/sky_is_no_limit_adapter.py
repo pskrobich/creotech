@@ -7,6 +7,7 @@ from app.adapters.base_adapter import BaseAdapter, EO_EXT, PROCESSING_EXT
 
 
 class SkyIsNoLimitAdapter(BaseAdapter):
+    media_types = frozenset({"application/json"})
 
     def matches(self, payload: bytes) -> bool:
         try:

@@ -1,18 +1,10 @@
-import json
-
 import pytest
 from pystac.errors import STACValidationError
 
-from app.adapters.base_adapter import EO_EXT, PROCESSING_EXT
 from app.adapters.sky_is_no_limit_adapter import SkyIsNoLimitAdapter
+from tests.conftest import EXPECTED_SKY_SHIELD_ITEM, as_json, edit_json
 
 adapter = SkyIsNoLimitAdapter()
-
-
-def edit_json(payload: bytes, edit) -> bytes:
-    document = json.loads(payload)
-    edit(document)
-    return json.dumps(document).encode()
 
 
 class TestMatches:
@@ -42,35 +34,7 @@ class TestToStacItem:
     def test_converts_sample_to_stac_item(self, sky_payload):
         item = adapter.to_stac_item(sky_payload)
 
-        assert item.to_dict() == {
-            "type": "Feature",
-            "stac_version": "1.1.0",
-            "stac_extensions": [EO_EXT, PROCESSING_EXT],
-            "id": "SKY_SHIELD_20260824_091522_L1C_POL",
-            "collection": "SKY_SHIELD",
-            "geometry": {
-                "type": "Polygon",
-                "coordinates": [
-                    [[20.912, 52.185], [21.245, 52.185], [21.245, 52.398], [20.912, 52.398], [20.912, 52.185]]
-                ],
-            },
-            "bbox": [20.912, 52.185, 21.245, 52.398],
-            "properties": {
-                "datetime": "2026-08-24T09:15:22.451000Z",
-                "platform": "SKY_SHIELD_03",
-                "eo:cloud_cover": 14.2,
-                "processing:level": "L1C",
-            },
-            "assets": {
-                band: {
-                    "href": f"https://data.skyisnolimit.com/store/2026/08/24/SKY_SHIELD_{file}.tif",
-                    "type": "image/tiff; application=geotiff",
-                    "roles": ["data"],
-                }
-                for band, file in [("red", "B04"), ("green", "B03"), ("blue", "B02"), ("nir", "B08")]
-            },
-            "links": [{"rel": "collection", "href": "../../SKY_SHIELD", "type": "application/json"}],
-        }
+        assert as_json(item.to_dict()) == EXPECTED_SKY_SHIELD_ITEM
 
     @pytest.mark.parametrize(
         ("edit", "error"),
