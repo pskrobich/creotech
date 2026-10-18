@@ -1,0 +1,5 @@
+pystac[validation]==1.13.0
+shapely==2.1.0
+pyproj==3.7.1
+pytest==8.3.5
+defusedxml==0.7.1
