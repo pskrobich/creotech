@@ -1,0 +1,6 @@
+name: creotech-interview
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
