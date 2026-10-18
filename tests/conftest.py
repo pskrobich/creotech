@@ -1,12 +1,17 @@
 import json
+import os
 import re
 from pathlib import Path
 
 import pytest
+from alembic import command
+from alembic.config import Config
+from testcontainers.community.postgres import PostgresContainer
 
 from app.adapters.base_adapter import PROCESSING_EXT, EO_EXT
 
-SAMPLES_DIR = Path(__file__).resolve().parent.parent / "samples"
+PROJECT_DIR = Path(__file__).resolve().parent.parent
+SAMPLES_DIR = PROJECT_DIR / "samples"
 
 EXPECTED_SKY_SHIELD_ITEM = {
     "type": "Feature",
@@ -75,6 +80,21 @@ EXPECTED_SPACE_EYE_ITEM = {
     },
     "links": [{"rel": "collection", "href": "../../SPACE_EYE", "type": "application/json"}],
 }
+
+_postgres = PostgresContainer("postgis/postgis:18-3.6", driver=None).with_kwargs(platform="linux/amd64")
+
+
+def pytest_sessionstart(session):
+    if "DATABASE_URL" in os.environ:
+        return
+    _postgres.start()
+    os.environ["DATABASE_URL"] = _postgres.get_connection_url()
+    command.upgrade(Config(str(PROJECT_DIR / "alembic.ini")), "head")
+
+
+def pytest_sessionfinish(session, exitstatus):
+    if _postgres.get_wrapped_container() is not None:
+        _postgres.stop()
 
 
 @pytest.fixture

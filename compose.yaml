@@ -1,6 +1,33 @@
 name: creotech-interview
 services:
+  db:
+    image: postgis/postgis:18-3.6
+    platform: linux/amd64
+    environment:
+      POSTGRES_USER: stac_user
+      POSTGRES_PASSWORD: stac_password
+      POSTGRES_DB: stac_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U stac_user -d stac_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   api:
     build: .
+    environment:
+      DATABASE_URL: postgresql://stac_user:stac_password@db:5432/stac_db
+      DB_POOL_MIN_SIZE: 1
+      DB_POOL_MAX_SIZE: 10
     ports:
       - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:
