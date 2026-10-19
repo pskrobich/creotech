@@ -3,12 +3,14 @@ from pystac import Item
 from app.adapters.base_adapter import UnsupportedFormatError, UnsupportedMediaTypeError
 from app.adapters.sky_is_no_limit_adapter import SkyIsNoLimitAdapter
 from app.adapters.space_is_no_limit_adapter import SpaceIsNoLimitAdapter
+from app.repository.stac_repository import upsert
 
 adapters = [SkyIsNoLimitAdapter(), SpaceIsNoLimitAdapter()]
 
 
-def store_stac_item(data: bytes, media_type: str) -> Item:
-    return get_stac_item(data, media_type)
+def upsert_stac_item(data: bytes, media_type: str) -> bool:
+    stac_item = get_stac_item(data, media_type)
+    return upsert(stac_item)
 
 
 def get_stac_item(data: bytes, media_type: str) -> Item:
