@@ -2,11 +2,10 @@ from datetime import UTC, datetime
 from unittest.mock import ANY
 
 import pytest
-from fastapi.testclient import TestClient
 from psycopg.rows import dict_row
 
 from app.database import pool
-from app.main import app, INGEST_REQUEST_URL
+from tests.api.conftest import JSON, XML, count_stored_items, put_ingest
 from tests.conftest import (
     EXPECTED_SKY_SHIELD_ITEM,
     EXPECTED_SPACE_EYE_ITEM,
@@ -15,8 +14,6 @@ from tests.conftest import (
     with_text,
     without,
 )
-
-client = TestClient(app)
 
 EXPECTED_SKY_SHIELD_ROW = {
     "collection": "SKY_SHIELD",
@@ -44,20 +41,6 @@ EXPECTED_SPACE_EYE_ROW = {
     "created_at": ANY,
     "updated_at": ANY,
 }
-JSON = "application/json"
-XML = "application/xml"
-
-
-@pytest.fixture(scope="module", autouse=True)
-def running_app():
-    with client:
-        yield
-
-
-@pytest.fixture(autouse=True)
-def empty_table(running_app):
-    with pool.connection() as conn:
-        conn.execute("TRUNCATE stac_items")
 
 
 def fetch_stored_item(collection: str, item_id: str) -> dict | None:
@@ -73,22 +56,12 @@ def fetch_stored_item(collection: str, item_id: str) -> dict | None:
         ).fetchone()
 
 
-def count_stored_items() -> int:
-    with pool.connection() as conn:
-        return conn.execute("SELECT count(*) FROM stac_items").fetchone()[0]
-
-
 def unchanged(payload: bytes) -> bytes:
     return payload
 
 
 def replaced_by(content: bytes):
     return lambda payload: content
-
-
-def put_ingest(payload: bytes, media_type: str | None):
-    headers = {"Content-Type": media_type} if media_type is not None else {}
-    return client.put(INGEST_REQUEST_URL, content=payload, headers=headers)
 
 
 class TestIngest:

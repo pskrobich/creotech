@@ -4,6 +4,7 @@ from psycopg.types.json import Jsonb
 from pystac import Item
 
 from app.database import pool
+from app.model.search import SearchRequest
 
 
 def upsert(item: Item) -> bool:
@@ -54,3 +55,39 @@ def to_row(item: Item) -> dict:
         "cloud_cover": item.properties.get("eo:cloud_cover"),
         "processing_level": item.properties.get("processing:level"),
     }
+
+
+def find_items(search_request: SearchRequest) -> list[Item]:
+    conditions = []
+    params = []
+
+    if search_request.bbox is not None:
+        conditions.append("ST_Intersects(geometry, ST_MakeEnvelope(%s, %s, %s, %s, 4326))")
+        params.extend(search_request.bbox)
+
+    if search_request.start_datetime is not None:
+        conditions.append("end_datetime >= %s")
+        params.append(search_request.start_datetime)
+
+    if search_request.end_datetime is not None:
+        conditions.append("start_datetime <= %s")
+        params.append(search_request.end_datetime)
+
+    if search_request.max_cloud_coverage is not None:
+        conditions.append("cloud_cover <= %s")
+        params.append(search_request.max_cloud_coverage)
+
+    if search_request.processing_level is not None:
+        conditions.append("processing_level = %s")
+        params.append(search_request.processing_level)
+
+    params.extend([search_request.limit, search_request.offset])
+
+    sql = "SELECT item FROM stac_items"
+    if conditions:
+        sql += " WHERE " + " AND ".join(conditions)
+    sql += " ORDER BY start_datetime DESC, collection, id"
+    sql += " LIMIT %s OFFSET %s"
+    with pool.connection() as conn:
+        rows = conn.execute(sql, params).fetchall()
+    return [Item.from_dict(row[0]) for row in rows]

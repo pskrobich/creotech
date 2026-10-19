@@ -3,7 +3,8 @@ from pystac import Item
 from app.adapters.base_adapter import UnsupportedFormatError, UnsupportedMediaTypeError
 from app.adapters.sky_is_no_limit_adapter import SkyIsNoLimitAdapter
 from app.adapters.space_is_no_limit_adapter import SpaceIsNoLimitAdapter
-from app.repository.stac_repository import upsert
+from app.model.search import SearchRequest
+from app.repository.stac_repository import find_items, upsert
 
 adapters = [SkyIsNoLimitAdapter(), SpaceIsNoLimitAdapter()]
 
@@ -21,3 +22,7 @@ def get_stac_item(data: bytes, media_type: str) -> Item:
         if adapter.matches(data):
             return adapter.to_stac_item(data)
     raise UnsupportedFormatError("Unsupported payload format")
+
+
+def search_stac_items(search_request: SearchRequest) -> list[Item]:
+    return find_items(search_request)
