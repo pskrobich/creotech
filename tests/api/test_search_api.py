@@ -1,6 +1,6 @@
 import pytest
 
-from app.main import SEARCH_REQUEST_URL
+from app.api.stac_api import SEARCH_REQUEST_URL, V1_REQUEST_MAPPING
 from tests.api.conftest import JSON, XML, client, put_ingest
 from tests.conftest import EXPECTED_SKY_SHIELD_ITEM, EXPECTED_SPACE_EYE_ITEM
 
@@ -15,7 +15,7 @@ def catalog(sky_payload, space_payload):
 
 
 def get_search(**params):
-    return client.get(SEARCH_REQUEST_URL, params=params)
+    return client.get(f"{V1_REQUEST_MAPPING}{SEARCH_REQUEST_URL}", params=params)
 
 
 def found_ids(response) -> list[str]:
