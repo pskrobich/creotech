@@ -11,7 +11,7 @@ from alembic import context
 config = context.config
 
 # Database URL comes from the environment (same variable as the API), not from alembic.ini.
-# compose.yaml uses postgresql://, SQLAlchemy needs the driver name for psycopg 3.
+# docker-compose.yaml uses postgresql://, SQLAlchemy needs the driver name for psycopg 3.
 database_url = os.environ["DATABASE_URL"].replace("postgresql://", "postgresql+psycopg://", 1)
 config.set_main_option("sqlalchemy.url", database_url)
 

@@ -20,7 +20,7 @@ class SkyIsNoLimitAdapter(BaseAdapter):
                 and document["acquisition_metadata"].get("provider_id") == "SkyIsNoLimit"
         )
 
-    def convert(self, payload: bytes) -> Item:
+    def _convert(self, payload: bytes) -> Item:
         document = json.loads(payload)
         acquisition_metadata = document["acquisition_metadata"]
         data_deliverables = document["data_deliverables"]

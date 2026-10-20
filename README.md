@@ -187,7 +187,16 @@ Items, newest first. Invalid parameters return 422.
 
 - **Adapters** (`app/adapters`): one per provider. Each one recognizes its format and maps it to a STAC
   Item with the Electro-Optical (`eo:cloud_cover`) and Processing (`processing:level`) extensions.
-  The item is then validated against the official STAC JSON schemas.
+  Every adapter extends `BaseAdapter` and defines:
+  - `media_types`: the `Content-Type` values it accepts,
+  - `matches(payload)`: whether the payload comes from its provider,
+  - `_convert(payload)`: the mapping of the provider's metadata to a STAC Item.
+
+  `BaseAdapter.to_stac_item(payload)` calls `_convert`, adds the link to the collection and validates
+  the item against the official STAC JSON schemas. For each request, the service takes the adapters
+  that accept its `Content-Type` (none: `415`) and uses the first one that matches the payload
+  (none: `400`). To add a provider, create a `BaseAdapter` subclass and add it to `ADAPTERS` in
+  `app/service/stac_service.py`.
 - **SPACE_EYE footprint**: the provider gives it in the coordinate system from the `CRS` element
   (`EPSG:32634`, in metres, in the sample); it is reprojected to longitude/latitude (WGS84), as STAC
   requires. The item's bbox is computed from the footprint, because the `GlobalBBOX` in
