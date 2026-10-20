@@ -1,8 +1,7 @@
 import pytest
 
-from app.api.stac_api import SEARCH_REQUEST_URL, V1_REQUEST_MAPPING
-from tests.api.conftest import JSON, XML, client, put_ingest
-from tests.conftest import EXPECTED_SKY_SHIELD_ITEM, EXPECTED_SPACE_EYE_ITEM
+from tests.api.conftest import JSON, XML, get_search, put_ingest
+from tests.conftest import EXPECTED_SKY_SHIELD_ITEM, EXPECTED_SPACE_EYE_ITEM, edit_json
 
 SKY_SHIELD_ID = EXPECTED_SKY_SHIELD_ITEM["id"]
 SPACE_EYE_ID = EXPECTED_SPACE_EYE_ITEM["id"]
@@ -12,10 +11,6 @@ SPACE_EYE_ID = EXPECTED_SPACE_EYE_ITEM["id"]
 def catalog(sky_payload, space_payload):
     put_ingest(sky_payload, JSON)
     put_ingest(space_payload, XML)
-
-
-def get_search(**params):
-    return client.get(f"{V1_REQUEST_MAPPING}{SEARCH_REQUEST_URL}", params=params)
 
 
 def found_ids(response) -> list[str]:
@@ -42,7 +37,11 @@ class TestSearch:
             pytest.param({"bbox": "20.0,52.0,20.95,52.3"}, [SKY_SHIELD_ID], id="bbox_west_of_space_eye"),
             pytest.param({"bbox": "21.0,51.4,21.2,52.1"}, [SPACE_EYE_ID], id="bbox_south_of_sky_shield"),
             pytest.param({"bbox": "22.0,51.5,22.5,52.0"}, [SPACE_EYE_ID], id="bbox_east_of_sky_shield"),
-            pytest.param({"bbox": "21.0,52.2,21.2,52.3"}, [SPACE_EYE_ID, SKY_SHIELD_ID], id="bbox_where_footprints_overlap"),
+            pytest.param(
+                {"bbox": "21.0,52.2,21.2,52.3"},
+                [SPACE_EYE_ID, SKY_SHIELD_ID],
+                id="bbox_where_footprints_overlap"
+            ),
             pytest.param({"bbox": "0,0,1,1"}, [], id="bbox_far_away"),
             pytest.param({"start_datetime": "2026-08-24T10:00:00Z"}, [SPACE_EYE_ID], id="datetime_only_start"),
             pytest.param(
@@ -68,6 +67,32 @@ class TestSearch:
 
         assert response.status_code == 200
         assert found_ids(response) == expected_ids
+
+    def test_filters_should_match_updated_values_after_reingest(self, sky_payload):
+        def change_filtered_fields(document):
+            document["product_characteristics"].update(processing_level="L2A")
+            document["product_characteristics"]["metrics"].update(cloud_cover_percentage=3.5)
+            document["acquisition_metadata"].update(capture_timestamp_utc="2026-08-25T09:15:22.451Z")
+            for point in document["spatial_extent"]["geometry_geojson"]["coordinates"][0]:
+                point[0] += 2
+            bounding_box = document["spatial_extent"]["bounding_box"]
+            bounding_box["min_longitude"] += 2
+            bounding_box["max_longitude"] += 2
+
+        updated_values = {
+            "bbox": "22.9,52.2,23.3,52.4",
+            "start_datetime": "2026-08-25T00:00:00Z",
+            "max_cloud_coverage": 3.5,
+            "processing_level": "L2A",
+        }
+        old_capture_time = {"end_datetime": "2026-08-24T10:00:00Z"}
+        assert found_ids(get_search(**updated_values)) == []
+        assert found_ids(get_search(**old_capture_time)) == [SKY_SHIELD_ID]
+
+        put_ingest(edit_json(sky_payload, change_filtered_fields), JSON)
+
+        assert found_ids(get_search(**updated_values)) == [SKY_SHIELD_ID]
+        assert found_ids(get_search(**old_capture_time)) == []
 
     @pytest.mark.parametrize(
         "params",

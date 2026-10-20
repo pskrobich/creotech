@@ -1,8 +1,9 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from psycopg import OperationalError
 
-from app.api.stac_api import router
+from app.api.stac_api import router, database_unavailable
 from app.database import pool
 
 
@@ -15,3 +16,4 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 app.include_router(router)
+app.add_exception_handler(OperationalError, database_unavailable)

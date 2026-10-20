@@ -2,7 +2,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.database import pool
-from app.api.stac_api import INGEST_REQUEST_URL, V1_REQUEST_MAPPING
+from app.api.stac_api import INGEST_REQUEST_URL, SEARCH_REQUEST_URL, V1_REQUEST_MAPPING
 from app.main import app
 
 client = TestClient(app)
@@ -28,6 +28,5 @@ def put_ingest(payload: bytes, media_type: str | None):
     return client.put(f"{V1_REQUEST_MAPPING}{INGEST_REQUEST_URL}", content=payload, headers=headers)
 
 
-def count_stored_items() -> int:
-    with pool.connection() as conn:
-        return conn.execute("SELECT count(*) FROM stac_items").fetchone()[0]
+def get_search(**params):
+    return client.get(f"{V1_REQUEST_MAPPING}{SEARCH_REQUEST_URL}", params=params)
