@@ -25,7 +25,7 @@ class SpaceIsNoLimitAdapter(BaseAdapter):
             return False
         return root.findtext("g:HeaderInfo/g:Provider", namespaces=NS) == "SpaceIsNoLimit"
 
-    def convert(self, payload: bytes) -> Item:
+    def _convert(self, payload: bytes) -> Item:
         root = fromstring(payload)
         header_info = self.required_element(root, "g:HeaderInfo")
         temporal_coverage = self.required_element(root, "g:TemporalCoverage")

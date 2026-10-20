@@ -15,11 +15,11 @@ class BaseAdapter(ABC):
         """Returns True if the payload is in this provider's format."""
 
     @abstractmethod
-    def convert(self, payload: bytes) -> Item:
+    def _convert(self, payload: bytes) -> Item:
         """Maps the provider's raw metadata to a STAC Item, without validating it."""
 
     def to_stac_item(self, payload: bytes) -> Item:
-        item = self.convert(payload)
+        item = self._convert(payload)
         item.add_link(Link(RelType.COLLECTION, f"../../{item.collection_id}", media_type=MediaType.JSON))
         item.validate()
         return item
