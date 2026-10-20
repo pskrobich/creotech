@@ -3,6 +3,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Query, Request, Response
 from fastapi.concurrency import run_in_threadpool
+from fastapi.responses import JSONResponse
 from pyproj.exceptions import CRSError
 from pystac.errors import STACValidationError
 from shapely.errors import GEOSException
@@ -13,7 +14,7 @@ from app.service.stac_service import search_stac_items, upsert_stac_item
 
 INGEST_REQUEST_URL = "/ingest"
 SEARCH_REQUEST_URL = "/search"
-V1_REQUEST_MAPPING= "/v1"
+V1_REQUEST_MAPPING = "/v1"
 INVALID_METADATA_ERRORS = (
     KeyError,
     ValueError,
@@ -47,3 +48,8 @@ async def ingest(request: Request) -> Response:
 def search(search_request: Annotated[SearchRequest, Query()]) -> list[dict]:
     items = search_stac_items(search_request)
     return [item.to_dict() for item in items]
+
+
+async def database_unavailable(_request: Request, _exc: Exception) -> JSONResponse:
+    logger.exception("Database unavailable")
+    return JSONResponse(status_code=503, content={"detail": "Database is temporarily unavailable"})

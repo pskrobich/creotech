@@ -1,11 +1,6 @@
-from datetime import UTC, datetime
-from unittest.mock import ANY
-
 import pytest
-from psycopg.rows import dict_row
 
-from app.database import pool
-from tests.api.conftest import JSON, XML, count_stored_items, put_ingest
+from tests.api.conftest import JSON, XML, get_search, put_ingest
 from tests.conftest import (
     EXPECTED_SKY_SHIELD_ITEM,
     EXPECTED_SPACE_EYE_ITEM,
@@ -15,45 +10,11 @@ from tests.conftest import (
     without,
 )
 
-EXPECTED_SKY_SHIELD_ROW = {
-    "collection": "SKY_SHIELD",
-    "id": "SKY_SHIELD_20260824_091522_L1C_POL",
-    "item": EXPECTED_SKY_SHIELD_ITEM,
-    "geometry": ANY,
-    "geometry_geojson": EXPECTED_SKY_SHIELD_ITEM["geometry"],
-    "start_datetime": datetime(2026, 8, 24, 9, 15, 22, 451000, tzinfo=UTC),
-    "end_datetime": datetime(2026, 8, 24, 9, 15, 22, 451000, tzinfo=UTC),
-    "cloud_cover": 14.2,
-    "processing_level": "L1C",
-    "created_at": ANY,
-    "updated_at": ANY,
-}
-EXPECTED_SPACE_EYE_ROW = {
-    "collection": "SPACE_EYE",
-    "id": "SE02_L2A_20260824T104500_N001",
-    "item": EXPECTED_SPACE_EYE_ITEM,
-    "geometry": ANY,
-    "geometry_geojson": EXPECTED_SPACE_EYE_ITEM["geometry"],
-    "start_datetime": datetime(2026, 8, 24, 10, 45, 0, tzinfo=UTC),
-    "end_datetime": datetime(2026, 8, 24, 10, 45, 18, tzinfo=UTC),
-    "cloud_cover": 4.85,
-    "processing_level": "L2A",
-    "created_at": ANY,
-    "updated_at": ANY,
-}
 
-
-def fetch_stored_item(collection: str, item_id: str) -> dict | None:
-    with pool.connection() as conn, conn.cursor(row_factory=dict_row) as cur:
-        return cur.execute(
-            """
-            SELECT *, ST_AsGeoJSON(geometry) ::jsonb AS geometry_geojson
-            FROM stac_items
-            WHERE collection = %s
-              AND id = %s
-            """,
-            (collection, item_id),
-        ).fetchone()
+def get_stored_items() -> list[dict]:
+    response = get_search()
+    assert response.status_code == 200
+    return response.json()
 
 
 def unchanged(payload: bytes) -> bytes:
@@ -67,54 +28,54 @@ def replaced_by(content: bytes):
 class TestIngest:
 
     @pytest.mark.parametrize(
-        ("fixture", "media_type", "expected_row"),
+        ("fixture", "media_type", "expected_item"),
         [
             pytest.param(
                 "sky_payload",
                 JSON,
-                EXPECTED_SKY_SHIELD_ROW,
+                EXPECTED_SKY_SHIELD_ITEM,
                 id="sky_is_no_limit_json"
             ),
             pytest.param(
                 "sky_payload",
                 "Application/JSON",
-                EXPECTED_SKY_SHIELD_ROW,
+                EXPECTED_SKY_SHIELD_ITEM,
                 id="json_uppercase"
             ),
             pytest.param(
                 "sky_payload",
                 "application/json; charset=utf-8",
-                EXPECTED_SKY_SHIELD_ROW,
+                EXPECTED_SKY_SHIELD_ITEM,
                 id="json_with_charset"
             ),
             pytest.param(
                 "space_payload",
                 XML,
-                EXPECTED_SPACE_EYE_ROW,
+                EXPECTED_SPACE_EYE_ITEM,
                 id="space_is_no_limit_xml"
             ),
             pytest.param(
                 "space_payload",
                 "text/xml",
-                EXPECTED_SPACE_EYE_ROW,
+                EXPECTED_SPACE_EYE_ITEM,
                 id="xml_as_text_xml"
             ),
             pytest.param(
                 "space_payload",
                 "application/xml; charset=utf-8",
-                EXPECTED_SPACE_EYE_ROW,
+                EXPECTED_SPACE_EYE_ITEM,
                 id="xml_with_charset"
             ),
         ],
     )
     def test_ingests_provider_sample_should_return_201_and_store_item(
-            self, request, fixture, media_type, expected_row
+            self, request, fixture, media_type, expected_item
     ):
         response = put_ingest(request.getfixturevalue(fixture), media_type)
 
         assert response.status_code == 201
         assert response.content == b""
-        assert fetch_stored_item(expected_row["collection"], expected_row["id"]) == expected_row
+        assert get_stored_items() == [expected_item]
 
     def test_ingesting_different_products_should_store_each_of_them(self, sky_payload, space_payload):
         other_sky_id = "SKY_SHIELD_20260825_101010_L1C_POL"
@@ -129,32 +90,25 @@ class TestIngest:
         ]
 
         assert [response.status_code for response in responses] == [201, 201, 201]
-        assert count_stored_items() == 3
-        assert fetch_stored_item("SKY_SHIELD", EXPECTED_SKY_SHIELD_ROW["id"]) == EXPECTED_SKY_SHIELD_ROW
-        assert fetch_stored_item("SKY_SHIELD", other_sky_id) == {
-            **EXPECTED_SKY_SHIELD_ROW,
-            "id": other_sky_id,
-            "item": {**EXPECTED_SKY_SHIELD_ITEM, "id": other_sky_id},
-        }
-        assert fetch_stored_item("SPACE_EYE", EXPECTED_SPACE_EYE_ROW["id"]) == EXPECTED_SPACE_EYE_ROW
+        assert get_stored_items() == [
+            EXPECTED_SPACE_EYE_ITEM,
+            EXPECTED_SKY_SHIELD_ITEM,
+            {**EXPECTED_SKY_SHIELD_ITEM, "id": other_sky_id},
+        ]
 
     @pytest.mark.parametrize(
-        ("fixture", "media_type", "edit", "expected_row"),
+        ("fixture", "media_type", "edit", "expected_item"),
         [
-            pytest.param("sky_payload", JSON, unchanged, EXPECTED_SKY_SHIELD_ROW, id="identical_json"),
-            pytest.param("space_payload", XML, unchanged, EXPECTED_SPACE_EYE_ROW, id="identical_xml"),
+            pytest.param("sky_payload", JSON, unchanged, EXPECTED_SKY_SHIELD_ITEM, id="identical_json"),
+            pytest.param("space_payload", XML, unchanged, EXPECTED_SPACE_EYE_ITEM, id="identical_xml"),
             pytest.param(
                 "sky_payload",
                 JSON,
                 lambda p: edit_json(p, lambda d: d["product_characteristics"]["metrics"].update(
                     cloud_cover_percentage=3.5)),
                 {
-                    **EXPECTED_SKY_SHIELD_ROW,
-                    "item": {
-                        **EXPECTED_SKY_SHIELD_ITEM,
-                        "properties": {**EXPECTED_SKY_SHIELD_ITEM["properties"], "eo:cloud_cover": 3.5},
-                    },
-                    "cloud_cover": 3.5,
+                    **EXPECTED_SKY_SHIELD_ITEM,
+                    "properties": {**EXPECTED_SKY_SHIELD_ITEM["properties"], "eo:cloud_cover": 3.5},
                 },
                 id="changed_json",
             ),
@@ -163,36 +117,27 @@ class TestIngest:
                 XML,
                 with_text("CloudCoveragePercentage", "3.5"),
                 {
-                    **EXPECTED_SPACE_EYE_ROW,
-                    "item": {
-                        **EXPECTED_SPACE_EYE_ITEM,
-                        "properties": {**EXPECTED_SPACE_EYE_ITEM["properties"], "eo:cloud_cover": 3.5},
-                    },
-                    "cloud_cover": 3.5,
+                    **EXPECTED_SPACE_EYE_ITEM,
+                    "properties": {**EXPECTED_SPACE_EYE_ITEM["properties"], "eo:cloud_cover": 3.5},
                 },
                 id="changed_xml",
             ),
         ],
     )
     def test_reingesting_should_return_204_and_replace_item(
-            self, request, fixture, media_type, edit, expected_row
+            self, request, fixture, media_type, edit, expected_item
     ):
         payload = request.getfixturevalue(fixture)
         put_ingest(payload, media_type)
-        first_save = fetch_stored_item(expected_row["collection"], expected_row["id"])
 
         response = put_ingest(apply(payload, edit), media_type)
 
         assert response.status_code == 204
         assert response.content == b""
-        assert count_stored_items() == 1
-        stored = fetch_stored_item(expected_row["collection"], expected_row["id"])
-        assert stored == expected_row
-        assert stored["created_at"] == first_save["created_at"]
-        assert stored["updated_at"] > first_save["updated_at"]
+        assert get_stored_items() == [expected_item]
 
     @pytest.mark.parametrize(
-        ("fixture", "media_type", "edit", "reason", "expected_row"),
+        ("fixture", "media_type", "edit", "reason", "expected_item"),
         [
             pytest.param(
                 "sky_payload",
@@ -200,7 +145,7 @@ class TestIngest:
                 lambda p: edit_json(p, lambda d: d["product_characteristics"]["metrics"].update(
                     cloud_cover_percentage=101)),
                 "101 is greater than the maximum of 100",
-                EXPECTED_SKY_SHIELD_ROW,
+                EXPECTED_SKY_SHIELD_ITEM,
                 id="sky_is_no_limit_json",
             ),
             pytest.param(
@@ -208,17 +153,16 @@ class TestIngest:
                 XML,
                 with_text("CloudCoveragePercentage", "101"),
                 "101.0 is greater than the maximum of 100",
-                EXPECTED_SPACE_EYE_ROW,
+                EXPECTED_SPACE_EYE_ITEM,
                 id="space_is_no_limit_xml",
             ),
         ],
     )
     def test_reingesting_invalid_metadata_should_return_422_and_keep_stored_item(
-            self, request, fixture, media_type, edit, reason, expected_row
+            self, request, fixture, media_type, edit, reason, expected_item
     ):
         payload = request.getfixturevalue(fixture)
         put_ingest(payload, media_type)
-        first_save = fetch_stored_item(expected_row["collection"], expected_row["id"])
 
         response = put_ingest(apply(payload, edit), media_type)
 
@@ -226,10 +170,7 @@ class TestIngest:
         detail = response.json()["detail"]
         assert detail.startswith("Invalid metadata:")
         assert reason in detail
-        assert count_stored_items() == 1
-        stored = fetch_stored_item(expected_row["collection"], expected_row["id"])
-        assert stored == expected_row
-        assert stored == first_save
+        assert get_stored_items() == [expected_item]
 
     @pytest.mark.parametrize(
         "media_type",
@@ -245,7 +186,7 @@ class TestIngest:
 
         assert response.status_code == 415
         assert response.json()["detail"].startswith("Unsupported media type")
-        assert count_stored_items() == 0
+        assert get_stored_items() == []
 
     @pytest.mark.parametrize(
         ("fixture", "media_type", "edit"),
@@ -273,7 +214,7 @@ class TestIngest:
 
         assert response.status_code == 400
         assert response.json() == {"detail": "Unsupported payload format"}
-        assert count_stored_items() == 0
+        assert get_stored_items() == []
 
     @pytest.mark.parametrize(
         ("fixture", "media_type", "edit", "reason"),
@@ -350,4 +291,4 @@ class TestIngest:
         detail = response.json()["detail"]
         assert detail.startswith("Invalid metadata:")
         assert reason in detail
-        assert count_stored_items() == 0
+        assert get_stored_items() == []

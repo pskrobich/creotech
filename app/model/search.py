@@ -3,7 +3,7 @@ from typing import Annotated, Self
 from pydantic import BaseModel, AwareDatetime, Field, BeforeValidator, model_validator
 
 
-def parse_bbox(value):
+def _parse_bbox(value):
     if isinstance(value, list) and len(value) == 1:
         value = value[0]
     if isinstance(value, str):
@@ -11,7 +11,7 @@ def parse_bbox(value):
     return value
 
 
-BBox = Annotated[tuple[float, float, float, float], BeforeValidator(parse_bbox)]
+BBox = Annotated[tuple[float, float, float, float], BeforeValidator(_parse_bbox)]
 
 
 class SearchRequest(BaseModel):
@@ -24,7 +24,7 @@ class SearchRequest(BaseModel):
     offset: int = Field(default=0, ge=0)
 
     @model_validator(mode="after")
-    def validate_ranges(self) -> Self:
+    def _validate_ranges(self) -> Self:
         if self.bbox is not None:
             minx, miny, maxx, maxy = self.bbox
             if not (-180 <= minx <= maxx <= 180):
