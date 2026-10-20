@@ -2,7 +2,8 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.database import pool
-from app.main import INGEST_REQUEST_URL, app
+from app.api.stac_api import INGEST_REQUEST_URL, V1_REQUEST_MAPPING
+from app.main import app
 
 client = TestClient(app)
 
@@ -24,7 +25,7 @@ def empty_table(running_app):
 
 def put_ingest(payload: bytes, media_type: str | None):
     headers = {"Content-Type": media_type} if media_type is not None else {}
-    return client.put(INGEST_REQUEST_URL, content=payload, headers=headers)
+    return client.put(f"{V1_REQUEST_MAPPING}{INGEST_REQUEST_URL}", content=payload, headers=headers)
 
 
 def count_stored_items() -> int:

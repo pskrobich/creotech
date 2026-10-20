@@ -23,11 +23,3 @@ class BaseAdapter(ABC):
         item.add_link(Link(RelType.COLLECTION, f"../../{item.collection_id}", media_type=MediaType.JSON))
         item.validate()
         return item
-
-
-class UnsupportedFormatError(ValueError):
-    """Raised when no adapter recognizes the payload format."""
-
-
-class UnsupportedMediaTypeError(ValueError):
-    """Raised when no adapter accepts the request's content type."""
