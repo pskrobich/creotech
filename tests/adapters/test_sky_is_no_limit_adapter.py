@@ -6,6 +6,8 @@ from tests.conftest import EXPECTED_SKY_SHIELD_ITEM, as_json, edit_json
 
 adapter = SkyIsNoLimitAdapter()
 
+ROTATED_SCENE = [[21.0, 52.2], [21.2, 52.15], [21.25, 52.35], [21.05, 52.4], [21.0, 52.2]]
+
 
 class TestMatches:
 
@@ -31,10 +33,28 @@ class TestMatches:
 
 class TestToStacItem:
 
-    def test_converts_sample_to_stac_item(self, sky_payload):
-        item = adapter.to_stac_item(sky_payload)
+    @pytest.mark.parametrize(
+        ("edit", "expected_item"),
+        [
+            pytest.param(lambda d: None, EXPECTED_SKY_SHIELD_ITEM, id="sample"),
+            pytest.param(
+                lambda d: d["spatial_extent"].update(
+                    geometry_geojson={"type": "Polygon", "coordinates": [ROTATED_SCENE]},
+                    bounding_box={"min_longitude": 0, "min_latitude": 0, "max_longitude": 1, "max_latitude": 1},
+                ),
+                {
+                    **EXPECTED_SKY_SHIELD_ITEM,
+                    "geometry": {"type": "Polygon", "coordinates": [ROTATED_SCENE]},
+                    "bbox": [21.0, 52.15, 21.25, 52.4],
+                },
+                id="bbox_computed_from_geometry",
+            ),
+        ],
+    )
+    def test_converts_to_stac_item(self, sky_payload, edit, expected_item):
+        item = adapter.to_stac_item(edit_json(sky_payload, edit))
 
-        assert as_json(item.to_dict()) == EXPECTED_SKY_SHIELD_ITEM
+        assert as_json(item.to_dict()) == expected_item
 
     @pytest.mark.parametrize(
         ("edit", "error"),
@@ -115,14 +135,19 @@ class TestToStacItem:
                 id="cloud_cover_as_string",
             ),
             pytest.param(
-                lambda d: d["spatial_extent"]["bounding_box"].update(min_longitude=None),
-                STACValidationError,
-                id="null_bbox_value",
+                lambda d: d["spatial_extent"]["geometry_geojson"].pop("coordinates"),
+                KeyError,
+                id="geometry_without_coordinates",
             ),
             pytest.param(
-                lambda d: d["spatial_extent"]["geometry_geojson"].pop("coordinates"),
-                STACValidationError,
-                id="geometry_without_coordinates",
+                lambda d: d["spatial_extent"].update(geometry_geojson=None),
+                ValueError,
+                id="no_geometry",
+            ),
+            pytest.param(
+                lambda d: d["spatial_extent"]["geometry_geojson"].update(coordinates=[]),
+                ValueError,
+                id="empty_geometry",
             ),
             pytest.param(
                 lambda d: d["data_deliverables"]["image_bands"].update(red=""),
@@ -140,7 +165,6 @@ class TestToStacItem:
         [
             pytest.param(lambda d: d["product_characteristics"].update(processing_level=""), id="empty_level"),
             pytest.param(lambda d: d["data_deliverables"].update(image_bands={}), id="no_assets"),
-            pytest.param(lambda d: d["spatial_extent"].update(geometry_geojson=None), id="no_geometry"),
             pytest.param(
                 lambda d: d["acquisition_metadata"].update(capture_timestamp_utc="2026-08-24T09:15:22"),
                 id="timestamp_without_timezone",

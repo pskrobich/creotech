@@ -27,19 +27,19 @@ class SpaceIsNoLimitAdapter(BaseAdapter):
 
     def _convert(self, payload: bytes) -> Item:
         root = fromstring(payload)
-        header_info = self.required_element(root, "g:HeaderInfo")
-        temporal_coverage = self.required_element(root, "g:TemporalCoverage")
-        product_quality = self.required_element(root, "g:ProductQuality")
-        geometric_properties = self.required_element(root, "g:GeometricProperties")
-        raster_files = self.required_element(root, "g:RasterFiles")
+        header_info = self._required_element(root, "g:HeaderInfo")
+        temporal_coverage = self._required_element(root, "g:TemporalCoverage")
+        product_quality = self._required_element(root, "g:ProductQuality")
+        geometric_properties = self._required_element(root, "g:GeometricProperties")
+        raster_files = self._required_element(root, "g:RasterFiles")
 
-        footprint = shapely.from_wkt(self.required_text(geometric_properties, "g:FootprintWKT"))
+        footprint = shapely.from_wkt(self._required_text(geometric_properties, "g:FootprintWKT"))
         if not isinstance(footprint, Polygon):
             raise ValueError(f"Footprint must be a polygon, got {footprint.geom_type}")
         if footprint.is_empty:
             raise ValueError("Footprint must not be empty")
         to_wgs84 = Transformer.from_crs(
-            self.required_text(geometric_properties, "g:CRS"), "EPSG:4326", always_xy=True
+            self._required_text(geometric_properties, "g:CRS"), "EPSG:4326", always_xy=True
         )
 
         def to_lon_lat(coords: np.ndarray) -> np.ndarray:
@@ -48,26 +48,26 @@ class SpaceIsNoLimitAdapter(BaseAdapter):
 
         geometry = orient(shapely.transform(footprint, to_lon_lat))
 
-        start = datetime.fromisoformat(self.required_text(temporal_coverage, "g:StartTimeUTC"))
-        end = datetime.fromisoformat(self.required_text(temporal_coverage, "g:StopTimeUTC"))
+        start = datetime.fromisoformat(self._required_text(temporal_coverage, "g:StartTimeUTC"))
+        end = datetime.fromisoformat(self._required_text(temporal_coverage, "g:StopTimeUTC"))
 
         return Item(
-            id=self.required_text(header_info, "g:GranuleID"),
+            id=self._required_text(header_info, "g:GranuleID"),
             geometry=mapping(geometry),
             bbox=list(geometry.bounds),
             datetime=start,
             start_datetime=start,
             end_datetime=end,
             properties={
-                "platform": self.required_text(header_info, "g:SpacecraftID"),
-                "eo:cloud_cover": float(self.required_text(product_quality, "g:CloudCoveragePercentage")),
-                "processing:level": self.required_text(product_quality, "g:ProcessingLevel"),
+                "platform": self._required_text(header_info, "g:SpacecraftID"),
+                "eo:cloud_cover": float(self._required_text(product_quality, "g:CloudCoveragePercentage")),
+                "processing:level": self._required_text(product_quality, "g:ProcessingLevel"),
             },
             stac_extensions=[EO_EXT, PROCESSING_EXT],
-            collection=self.required_text(header_info, "g:Mission"),
+            collection=self._required_text(header_info, "g:Mission"),
             assets={
                 band.get("name", "").split("_")[-1].lower(): Asset(
-                    href=self.required_text(band, "g:URL"),
+                    href=self._required_text(band, "g:URL"),
                     media_type=MediaType.GEOTIFF,
                     roles=["data"],
                 )
@@ -76,14 +76,14 @@ class SpaceIsNoLimitAdapter(BaseAdapter):
         )
 
     @staticmethod
-    def required_element(parent: Element, path: str) -> Element:
+    def _required_element(parent: Element, path: str) -> Element:
         element = parent.find(path, NS)
         if element is None:
             raise ValueError(f"Missing required element: {path}")
         return element
 
     @staticmethod
-    def required_text(parent: Element, path: str) -> str:
+    def _required_text(parent: Element, path: str) -> str:
         text = parent.findtext(path, namespaces=NS)
         if text is None or not text.strip():
             raise ValueError(f"Missing required element: {path}")

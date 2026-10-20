@@ -2,6 +2,8 @@ import json
 from datetime import datetime
 
 from pystac import Item, Asset, MediaType
+from shapely.geometry import shape
+from shapely.geometry.base import BaseGeometry
 
 from app.adapters.base_adapter import BaseAdapter, EO_EXT, PROCESSING_EXT
 
@@ -25,18 +27,13 @@ class SkyIsNoLimitAdapter(BaseAdapter):
         acquisition_metadata = document["acquisition_metadata"]
         data_deliverables = document["data_deliverables"]
         product_characteristics = document["product_characteristics"]
-        spatial_extent = document["spatial_extent"]
-        bounding_box = spatial_extent["bounding_box"]
+        geometry = document["spatial_extent"]["geometry_geojson"]
+        footprint = self._required_footprint(geometry)
 
         return Item(
             id=acquisition_metadata["scene_identifier"],
-            geometry=spatial_extent["geometry_geojson"],
-            bbox=[
-                bounding_box["min_longitude"],
-                bounding_box["min_latitude"],
-                bounding_box["max_longitude"],
-                bounding_box["max_latitude"]
-            ],
+            geometry=geometry,
+            bbox=list(footprint.bounds),
             datetime=datetime.fromisoformat(acquisition_metadata["capture_timestamp_utc"]),
             properties={
                 "platform": acquisition_metadata["satellite_id"],
@@ -50,3 +47,12 @@ class SkyIsNoLimitAdapter(BaseAdapter):
                 for band, href in data_deliverables["image_bands"].items()
             }
         )
+
+    @staticmethod
+    def _required_footprint(geometry: dict | None) -> BaseGeometry:
+        if not geometry:
+            raise ValueError("Missing required geometry: geometry_geojson")
+        footprint = shape(geometry)
+        if footprint.is_empty:
+            raise ValueError("Geometry must not be empty")
+        return footprint

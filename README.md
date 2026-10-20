@@ -197,13 +197,12 @@ Items, newest first. Invalid parameters return 422.
   that accept its `Content-Type` (none: `415`) and uses the first one that matches the payload
   (none: `400`). To add a provider, create a `BaseAdapter` subclass and add it to `ADAPTERS` in
   `app/service/stac_service.py`.
-- **SPACE_EYE footprint**: the provider gives it in the coordinate system from the `CRS` element
-  (`EPSG:32634`, in metres, in the sample); it is reprojected to longitude/latitude (WGS84), as STAC
-  requires. The item's bbox is computed from the footprint, because the `GlobalBBOX` in
-  the sample file does not cover it (it says 19.981-21.615°E, while the footprint spans 21.0-22.61°E).
+- **Footprint and bbox**: geometry is required. The bbox is computed from the geometry, because the
+  provider's bbox can be wrong (the `GlobalBBOX` in the SpaceIsNoLimit sample doesn't cover the
+  footprint). SPACE_EYE sends the footprint in metres (`EPSG:32634`), so it is converted to WGS84.
 - **Time**: SKY_SHIELD has a single capture time, SPACE_EYE an acquisition window. Both are stored as a
   time range, so the `/search` time filter works the same way for both.
-- **Storage**: table `stac_items` (Alembic migration in `migrations/`) keeps the full STAC Item as
+- **Storage**: table `stac_items` (Alembic migrations in `migrations/`) keeps the full STAC Item as
   `jsonb` plus indexed columns used by the search filters (PostGIS geometry, time range, cloud cover,
   processing level).
 - **Ingestion is synchronous**: the provider gets the result immediately and can resend a rejected
