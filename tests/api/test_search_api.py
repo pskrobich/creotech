@@ -43,6 +43,11 @@ class TestSearch:
                 id="bbox_where_footprints_overlap"
             ),
             pytest.param({"bbox": "0,0,1,1"}, [], id="bbox_far_away"),
+            pytest.param(
+                {"bbox": "21.0,51.353,21.05,51.36"},
+                [],
+                id="bbox_inside_space_eye_bbox_but_outside_footprint"
+            ),
             pytest.param({"start_datetime": "2026-08-24T10:00:00Z"}, [SPACE_EYE_ID], id="datetime_only_start"),
             pytest.param(
                 {"start_datetime": "2026-08-24T09:00:00Z", "end_datetime": "2026-08-24T10:00:00Z"},

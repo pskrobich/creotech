@@ -49,7 +49,7 @@ def _to_row(item: Item) -> dict:
         "collection": item.collection_id,
         "id": item.id,
         "item": Jsonb(item.to_dict()),
-        "geometry": json.dumps(item.geometry) if item.geometry else None,
+        "geometry": json.dumps(item.geometry),
         "start_datetime": common.start_datetime or item.datetime,
         "end_datetime": common.end_datetime or item.datetime,
         "cloud_cover": item.properties.get("eo:cloud_cover"),
